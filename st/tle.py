@@ -2,6 +2,7 @@
 Two-line element (TLE) manipulation
 """
 
+import sys
 import numpy as np
 import getpass as gp
 from spacetrack import SpaceTrackClient
@@ -19,6 +20,7 @@ from st.tlelements import (
     unpackElements,
     modifyElements
 )
+from st.utils import parsePropagationInfo
 
 UN = 'J.Blake@warwick.ac.uk'  # change username here
 TS = load.timescale()         # save repeated use in iterative loops
@@ -118,6 +120,10 @@ class TLE:
         """
         if self._validate(line1, line2, name):
             self._unpack()
+            self._ts = TS
+            self._propagate = 0
+        else:
+            sys.exit()
 
     def _validate(self, line1, line2, name):
         """
@@ -152,109 +158,83 @@ class TLE:
         Unpack TLE input
         """
         unpackElements(self)
-
-        self._ts = TS
         self._object = EarthSatellite(self.line1,
                                       self.line2,
                                       self.name)
 
-    def _specify_utc(self, t):
+    def _propagate_pos(self):
         """
-        Correct timezone info for existing datetime
-
-        Parameters
-        ----------
-        t : datetime.datetime
-            Time to correct
-
-        Returns
-        -------
-        t : datetime.datetime
-            Corrected time
-        """
-        return t.replace(tzinfo=utc)
-
-    def _pos_at(self, t, site):
-        """
-        Predict geometric ICRS position at time t
-
-        Parameters
-        ----------
-        t : datetime.datetime
-            Time [utc]
-        site : site.Site
-            Observation site
+        Predict geometric ICRS position(s) for stored time(s) and site
 
         Returns
         -------
         pos : skyfield.positionlib.Geometric
-            Predicted geometric ICRS position at time t
+            Predicted geometric ICRS position(s)
         """
-        return (self._object - site.topocentric).at(self._ts.utc(self._specify_utc(t)))
-
-    def radec_at(self, t, site):
+        return (self._object - self._site.topocentric).at(self._internal_time)
+    
+    def parse_propagation_info(self, time, site):
         """
-        Predict sky coordinate(s) (RA, Dec) at time(s) t
-
+        Parse time and site information for TLE propagation
+        
         Parameters
         ----------
-        t : datetime object
-            Time(s) [utc]
-        site : site.Site
-            Observation site
+        time : datetime | array-like
+            Input time | times for propagation
+        site : str | st.site.Site
+            Observation site name | Site object
+        """
+        if not parsePropagationInfo(self, time, site):
+            sys.exit()
+
+    def propagate_radec(self):
+        """
+        Predict sky coordinate(s) (RA, DEC) for stored time(s) and site
 
         Returns
         -------
-        coord : astropy.coordinates.SkyCoord
-            Predicted sky coordinate(s) (RA, Dec) at time(s) t
+        ra, dec : array-like | None
+            Predicted RA [deg] and DEC [deg] | None if no time(s) or site stored
         """
-        ra, dec, _ = self._pos_at(t, site).radec()
-        return SkyCoord(ra=ra.hours,
-                        dec=dec.degrees,
-                        unit=(u.hourangle, u.deg),
-                        frame='icrs')
+        if self._propagate:
+            ra, dec, _ = self._propagate_pos().radec()
+            return ra._degrees, dec.degrees
+        else:
+            print('TLEError: No propagation time(s) or site stored')
+            return None
 
-    def hourangle_at(self, t, site):
+    def propagate_ha(self):
         """
-        Predict hour angle(s) at time(s) t
-
-        Parameters
-        ----------
-        t : datetime object
-            Time(s) [utc]
-        site : site.Site
-            Observation site
+        Predict hour angle(s) for stored time(s) and site
 
         Returns
         -------
-        ha : Longitude object
-            Hour angle(s) of object at time(s) t
+        ha : astropy.coordinates.Longitude | None
+            Hour angle(s) [hours] | None if no time(s) or site stored
         """
-        ra = self.radec_at(t, site).ra
-        lst = Time(t, scale='utc', location=site.geodetic).sidereal_time('apparent')
-        return (lst - ra).wrap_at(12 * u.hourangle)
+        if self._propagate:
+            ra, _ = self.propagate_radec()
+            lst = Time(self._time, scale='utc', location=self._site.geodetic).sidereal_time('apparent')
+            return (lst - ra).wrap_at(12 * u.hourangle)
+        else:
+            print('TLEError: No propagation time(s) or site stored')
+            return None
 
-    def altaz_at(self, t, site):
+    def propagate_altaz(self):
         """
-        Predict sky coordinate(s) (AltAz frame) at time(s) t
-
-        Parameters
-        ----------
-        t : datetime object
-            Time(s) [utc]
-        site : site.Site
-            Observation site
+        Predict sky coordinate(s) (ALT, AZ) for stored time(s) and site
 
         Returns
         -------
-        coord : astropy.coordinates.SkyCoord
-            Predicted sky coordinate(s) (AltAz frame) at time(s) t
+        coord : array-like | None
+            Predicted ALT [deg] and AZ [deg] | None if no time(s) or site stored
         """
-        alt, az, _ = self._pos_at(t, site).altaz()
-        return SkyCoord(alt=alt.degrees,
-                        az=az.degrees,
-                        unit=(u.deg, u.deg),
-                        frame='altaz')
+        if self._propagate:
+            alt, az, _ = self._propagate_pos().altaz()
+            return alt.degrees, az.degrees
+        else:
+            print('TLEError: No propagation time(s) or site stored')
+            return None
 
     def modify_elements(self, checksum=False, norad_id=None, designator=None, epoch=None,
                         mmdot=None, mmdot2=None, drag=None, setnumber=None,

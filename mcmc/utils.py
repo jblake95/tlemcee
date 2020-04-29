@@ -4,6 +4,7 @@ General tasks for tlemcee MCMC algorithm
 from datetime import datetime
 import emcee
 import numpy as np
+import time
 
 from mcmc.config import Config
 
@@ -23,7 +24,7 @@ def model(theta, config):
     ra, dec : array-like
         Updated arc, computed with modified TLE
     """
-    #t0 = datetime.now()
+    t0 = time.time()
     params = config.priors['name']
     if 'mmdot' in params:
         mmdot = float(theta[params.index('mmdot')])
@@ -61,9 +62,9 @@ def model(theta, config):
         mm = float(theta[params.index('mm')])
     else:
         mm = None
-    #t1 = datetime.now()
-    #print((t1 - t0).microseconds)
-    #t0 = datetime.now()
+    t1 = time.time()
+    print(t1 - t0)
+    t0 = time.time()
     config.tle.modify_elements(mmdot=mmdot,
                                mmdot2=mmdot2,
                                drag=drag,
@@ -73,18 +74,13 @@ def model(theta, config):
                                argperigee=argperigee,
                                meananomaly=meananomaly,
                                mm=mm)
-    #t1 = datetime.now()
-    #print((t1 - t0).microseconds)
-    #t0 = datetime.now()
-    ra, dec = np.zeros((2, len(config.data['time'])))
-    for t, time in enumerate(config.data['time']):
-        coord = config.tle.radec_at(time,
-                                    config.site)
-        ra[t] = coord.ra.deg
-        dec[t] = coord.dec.deg
-    #t1 = datetime.now()
-    #print((t1 - t0).microseconds)
-    #print('--')
+    t1 = time.time()
+    print(t1 - t0)
+    t0 = time.time()
+    ra, dec = config.tle.propagate_radec()
+    t1 = time.time()
+    print(t1 - t0)
+    print('--')
     return ra, dec
 
 def lnprior(theta, config):

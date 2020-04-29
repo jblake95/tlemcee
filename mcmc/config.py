@@ -85,7 +85,7 @@ class Config:
             sys.exit()
 
         times = []
-        for time in arc.ephem['UTC']:
+        for t, time in enumerate(arc.ephem['UTC']):
             times.append(datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%f'))
 
         self.data = {'time': np.array(times),
@@ -117,6 +117,10 @@ class Config:
         Construct input TLE from fixed priors
         """
         self.tle = TLE()  # blank canvas
+
+        # parse propagation info
+        self.tle.parse_propagation_info(self.data['time'],
+                                        self.site)
 
         # set fixed priors if any
         if 'fixed' in self._config.keys():

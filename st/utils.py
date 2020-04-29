@@ -2,6 +2,12 @@
 General tasks for TLE manipulation
 """
 
+import numpy as np
+from datetime import datetime
+from skyfield.api import utc
+
+from st.site import Site
+
 def fractional_yearday(dt):
     """
     Obtain fractional year day from datetime object
@@ -94,3 +100,72 @@ def read_tle_standard_form(sci_not):
     return float('{}e{}'.format(sci_not[:-2],
                                 sci_not[-2:]))
 
+def parseTime(tle, time):
+    """
+    Parse time input for TLE propagation
+
+    Parameters
+    ----------
+    tle : st.tle.TLE
+        TLE object to be propagated
+    time : datetime | array-like
+        Input time | times for propagation
+    """
+    # replace tzinfo
+    tle._time = []
+    if isinstance(time, datetime):
+        tle._time.append(time.replace(tzinfo=utc))
+    elif isinstance(time, (list, np.ndarray)):
+        tle._time = time
+        for t, time in enumerate(tle._time):
+            tle._time[t] = time.replace(tzinfo=utc)
+    else:
+        print('TLEError: Time input must be datetime | array-like')
+        return 0
+
+    tle._internal_time = tle._ts.utc(tle._time)
+    return 1
+
+def parseSite(tle, site):
+    """
+    Parse observation site for TLE propagation
+    
+    Parameters
+    ----------
+    tle : st.tle.TLE
+        TLE object to be propagated
+    site : str | st.site.Site
+        Observation site name | Site object
+    """
+    if isinstance(site, str):
+        tle._site = Site(site)
+    elif isinstance(site, Site):
+        tle._site = site
+    else:
+        print('TLEError: Site input must be str | Site')
+        return 0
+    return 1
+
+def parsePropagationInfo(tle, time, site):
+    """
+    Parse time and site information for TLE propagator
+
+    Parameters
+    ----------
+    tle : st.tle.TLE
+        TLE object to be propagated
+    time : datetime | array-like
+        Input time | times for propagation
+    site : str | st.site.Site
+        Observation site name | Site object
+    """
+    if parseTime(tle, time):
+        if parseSite(tle, site):
+            # pre-compute expensive attributes to speed up propagation
+            tle._internal_time.MT
+            tle._internal_time.gast
+            tle._propagate = 1
+            return 1
+    else:
+        tle._propagate = 0
+        return 0

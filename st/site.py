@@ -2,6 +2,7 @@
 Class for observatory information
 """
 
+import sys
 from skyfield.api import Topos
 from astropy.coordinates import EarthLocation
 
@@ -24,6 +25,8 @@ class Site:
         """
         if self._validate(site_name):
             self._set_location()
+        else:
+            sys.exit()
 
     def _validate(self, site_name):
         """
