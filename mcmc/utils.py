@@ -24,7 +24,6 @@ def model(theta, config):
     ra, dec : array-like
         Updated arc, computed with modified TLE
     """
-    t0 = time.time()
     params = config.priors['name']
     if 'mmdot' in params:
         mmdot = float(theta[params.index('mmdot')])
@@ -62,9 +61,7 @@ def model(theta, config):
         mm = float(theta[params.index('mm')])
     else:
         mm = None
-    t1 = time.time()
-    print(t1 - t0)
-    t0 = time.time()
+
     config.tle.modify_elements(mmdot=mmdot,
                                mmdot2=mmdot2,
                                drag=drag,
@@ -74,14 +71,8 @@ def model(theta, config):
                                argperigee=argperigee,
                                meananomaly=meananomaly,
                                mm=mm)
-    t1 = time.time()
-    print(t1 - t0)
-    t0 = time.time()
-    ra, dec = config.tle.propagate_radec()
-    t1 = time.time()
-    print(t1 - t0)
-    print('--')
-    return ra, dec
+
+    return config.tle.propagate_radec()
 
 def lnprior(theta, config):
     """
@@ -146,7 +137,6 @@ def lnprob(theta, config):
         Config containing prior and data information
     """
     lp = lnprior(theta, config)
-    print(lp)
     if not np.isfinite(lp):
         return -np.inf
     return lp + lnlike(theta, config)

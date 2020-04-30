@@ -6,7 +6,6 @@ import sys
 import numpy as np
 import getpass as gp
 from spacetrack import SpaceTrackClient
-from skyfield.sgp4lib import EarthSatellite
 from skyfield.api import (
     load,
     utc
@@ -158,9 +157,6 @@ class TLE:
         Unpack TLE input
         """
         unpackElements(self)
-        self._object = EarthSatellite(self.line1,
-                                      self.line2,
-                                      self.name)
 
     def _propagate_pos(self):
         """

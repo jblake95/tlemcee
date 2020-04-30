@@ -9,6 +9,7 @@ from datetime import (
 )
 from astropy import units as u
 from astropy.coordinates import Angle
+from skyfield.sgp4lib import EarthSatellite
 
 from st.utils import (
     fractional_yearday,
@@ -1306,6 +1307,10 @@ def unpackElements(tle):
             tle.name = tle.name[2:]
     else:
         tle.name = 'UNKNOWN'
+
+    tle._object = EarthSatellite(tle.line1,
+                                 tle.line2,
+                                 tle.name)
     return None
 
 def calculateCheckSums(tle):
@@ -1436,4 +1441,8 @@ def modifyElements(tle, checksum, norad_id, designator, epoch, mmdot, mmdot2, dr
 
     if checksum:
         calculateCheckSums(tle)
+
+    tle._object = EarthSatellite(tle.line1,
+                                 tle.line2,
+                                 tle.name)
     return None
