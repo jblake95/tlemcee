@@ -15,8 +15,8 @@ from astropy.table import Table
 
 from st.tle import ST
 from st.site import Site
-from algorithm.gauss import gaussAlgorithm
-from algorithm.utils import (
+from iod.gauss import gaussAlgorithm
+from iod.utils import (
     Log,
     simulateEphem
 )
@@ -97,18 +97,13 @@ class Arc:
         out_dir : str, optional
             Path to output directory
             Default = None
-
-        Returns
-        -------
-        ephem : astropy.table.Table
-            Table containing simulated ephemeris information
         """
-        return simulateEphem(self.site,
-                             norad_id,
-                             start,
-                             end,
-                             step,
-                             out_dir=out_dir)
+        simulateEphem(self,
+                      norad_id,
+                      start,
+                      end,
+                      step,
+                      out_dir=out_dir)
 
     def initialOrbit(self, idx1, idx2, idx3, improve=False, verbose=False):
         """

@@ -4,7 +4,7 @@ Gauss method of preliminary orbit determination
 
 import numpy as np
 
-from algorithm.utils import (
+from iod.utils import (
     Constants,
     positionVector,
     directionCosineVector,
@@ -196,6 +196,6 @@ def gaussAlgorithm(arc, mu=Constants.mu, f=Constants.f, r_body=Constants.R_e,
                 if improved_orbit is not None:
                     orbit = improved_orbit
 
-            output.update({'{}'.format(r): orbit})
+            output.update({r: orbit})
 
     return output
