@@ -13,7 +13,8 @@ from skyfield.api import (
 from datetime import timedelta
 from astropy import units as u
 from astropy.time import Time
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import Angle
+from astropy.table import Table
 
 from st.tlelements import (
     unpackElements,
@@ -80,6 +81,11 @@ class ST:
             Desired epoch
         search_radius : int, optional
             Search radius either side of epoch [days]
+
+        Returns
+        -------
+        tle : st.tle.TLE
+            Past TLE for NORAD object
         """
         epoch_range = '{}--{}'.format((epoch - timedelta(days=search_radius)).strftime('%Y-%m-%d'),
                                       (epoch + timedelta(days=search_radius)).strftime('%Y-%m-%d'))
@@ -99,6 +105,26 @@ class ST:
         return TLE(el_sets[3 * idx + 1],
                    el_sets[3 * idx + 2],
                    el_sets[3 * idx])
+
+    def get_sat_cat(self, norad_id):
+        """
+        Obtain SatCat entry for NORAD object
+
+        Parameters
+        ----------
+        norad_id : int
+            NORAD ID for object
+
+        Returns
+        -------
+        sat_cat : astropy.table.Table
+            Table of SatCat information for NORAD object
+        """
+        sat_cat = self.client.satcat(norad_cat_id=norad_id)[0]
+
+        for key in sat_cat:
+            sat_cat[key] = [sat_cat[key]]
+        return Table(sat_cat)
 
 class TLE:
     """
@@ -211,7 +237,7 @@ class TLE:
         if self._propagate:
             ra, _ = self.propagate_radec()
             lst = Time(self._time, scale='utc', location=self._site.geodetic).sidereal_time('apparent')
-            return (lst - ra).wrap_at(12 * u.hourangle)
+            return (lst - Angle(ra, u.deg)).wrap_at(12 * u.hourangle)
         else:
             print('TLEError: No propagation time(s) or site stored')
             return None
