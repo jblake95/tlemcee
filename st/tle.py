@@ -290,3 +290,19 @@ class TLE:
                        meananomaly=meananomaly,
                        mm=mm,
                        revnumber=revnumber)
+
+    def save(self, out_dir):
+        """
+        Save TLE to file
+
+        Parameters
+        ----------
+        out_dir : str
+            Path to output directory
+        """
+        out_path = '{}/3le_{}_{}.txt'.format(out_dir,
+                                             self.norad_id.value,
+                                             self.epoch.entry)
+        with open(out_path, 'w') as f:
+            for line in [self.name, self.line1, self.line2]:
+                f.write('{}\n'.format(line))
