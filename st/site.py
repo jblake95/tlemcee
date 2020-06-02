@@ -8,7 +8,8 @@ from astropy.coordinates import EarthLocation
 
 # add new observation sites here
 # format {site_name: [longitude (deg), latitude (deg), elevation (m)]}
-SITES = {'LaPalma': [-17.877594, 28.761938, 2348]}
+SITES = {'INT': [-17.877594, 28.761938, 2348],
+         'RASA': [-17.8796168, 28.7603135, 2387]}
 
 class Site:
     """
