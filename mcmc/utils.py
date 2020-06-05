@@ -1,10 +1,9 @@
 """
 General tasks for tlemcee MCMC algorithm
 """
-from datetime import datetime
-import emcee
+
 import numpy as np
-import time
+from datetime import datetime
 
 from mcmc.config import Config
 
@@ -111,7 +110,6 @@ def lnlike(theta, config):
     ra_model, dec_model = model(theta, config)
 
     if True in np.isnan(ra_model) or True in np.isnan(dec_model):
-        print('here :(')
         return -np.inf
 
     # compute log likelihood for RA
@@ -141,17 +139,94 @@ def lnprob(theta, config):
         return -np.inf
     return lp + lnlike(theta, config)
 
-def runSampler(config):
+def getBestModel(sampler, burnin=None, save=False):
     """
-    Set up sampler and run MCMC
+    Obtain best model from a given sampler chain
+
+    Parameters
+    ----------
+    sampler : mcmc.sampler.Sampler
+        MCMC sampler containing chain information
+    burnin : int, optional
+        Burn-in phase for sampler chain (user-assessed)
+        If given, use median method on sampler chain with burnin phase removed
+        If None, use argmax method on entire sampler chain
+        Default = None
+    save : bool, optional
+        Toggle to save best model TLE to file
+        Default = False
+
+    Returns
+    -------
+    best_model : st.tle.TLE
+        Best model TLE
     """
-    sampler = emcee.EnsembleSampler(config.n_walkers,
-                                    config.n_dim,
-                                    lnprob,
-                                    args=(config,))
-    print('Running MCMC...')
-    sampler.run_mcmc(config.init_pos,
-                     config.n_steps,
-                     rstate0=np.random.get_state())
-    print('Done.')
-    return sampler
+    best_params = {}
+    if burnin is None:
+        # use argmax method
+        best_pars_idx = np.unravel_index(np.argmax(sampler.sampler.lnprobability),
+                                         (sampler.config.n_walkers,
+                                          sampler.config.n_steps))
+        best_pars = sampler.sampler.chain[best_pars_idx[0], best_pars_idx[1], :]
+
+        for p, param in enumerate(sampler.config.priors['name']):
+            best_params[param] = {'value': best_pars[p],
+                                  'error': None}
+    else:
+        # use median method
+        samples = sampler.sampler.chain[:, burnin:, :].reshape((-1,
+                                                                sampler.config.n_dim))
+
+        for p, param in enumerate(sampler.config.priors['name']):
+            best_params[param] = {'value': np.median(samples[:, i]),
+                                  'error': np.std(samples[:, i])}
+
+    if 'mmdot' in best_params:
+        mmdot = best_params['mmdot']['value']
+    else:
+        mmdot = None
+    if 'mmdot2' in best_params:
+        mmdot2 = best_params['mmdot2']['value']
+    else:
+        mmdot2 = None
+    if 'drag' in best_params:
+        drag = best_params['drag']['value']
+    else:
+        drag = None
+    if 'inclination' in best_params:
+        inclination = best_params['inclination']['value']
+    else:
+        inclination = None
+    if 'raan' in best_params:
+        raan = best_params['raan']['value']
+    else:
+        raan = None
+    if 'eccentricity' in best_params:
+        eccentricity = best_params['eccentricity']['value']
+    else:
+        eccentricity = None
+    if 'argperigee' in best_params:
+        argperigee = best_params['argperigee']['value']
+    else:
+        argperigee = None
+    if 'meananomaly' in best_params:
+        meananomaly = best_params['meananomaly']['value']
+    else:
+        meananomaly = None
+    if 'mm' in best_params:
+        mm = best_params['mm']['value']
+    else:
+        mm = None
+
+    sampler.config.tle.modify_elements(mmdot=mmdot,
+                                       mmdot2=mmdot2,
+                                       drag=drag,
+                                       inclination=inclination,
+                                       raan=raan,
+                                       eccentricity=eccentricity,
+                                       argperigee=argperigee,
+                                       meananomaly=meananomaly,
+                                       mm=mm)
+    if save:
+        sampler.config.tle.save(sampler.out_dir)
+    return sampler.config.tle
