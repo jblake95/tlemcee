@@ -64,3 +64,12 @@ r = r._degrees
 d = d.degrees
 t1 = time.time()
 print('Test 3 took {} seconds'.format(t1 - t0))
+
+from st.tle import TLE
+tle = TLE(line1, line2)
+tle.parse_propagation_info(times, 'LaPalma')
+
+t0 = time.time()
+ra, dec = tle.propagate_radec()
+t1 = time.time()
+print('Test 4 took {} seconds'.format(t1 - t0))
